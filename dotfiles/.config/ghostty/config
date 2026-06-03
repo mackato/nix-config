@@ -1,0 +1,13 @@
+# ====================
+# Appearance
+# ====================
+font-size = 15
+theme = TokyoNight Night
+split-divider-color = RoyalBlue
+
+
+# ====================
+# Breakline
+# ===================
+keybind = ctrl+m=text:\x0D
+
