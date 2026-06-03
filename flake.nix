@@ -26,6 +26,8 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
+            # 既存の sync.sh 由来 symlink・実ファイルと衝突した場合は失敗させず退避する。
+            home-manager.backupFileExtension = "hm-bak";
             home-manager.users.kato = import ./home/home.nix;
           }
         ];
