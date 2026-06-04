@@ -9,6 +9,8 @@
 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+
+    nix-homebrew.url = "github:zhaofengli/nix-homebrew";
   };
 
   outputs =
@@ -17,11 +19,13 @@
       nixpkgs,
       nix-darwin,
       home-manager,
+      nix-homebrew,
     }:
     {
       darwinConfigurations."default" = nix-darwin.lib.darwinSystem {
         modules = [
           ./darwin/configuration.nix
+          nix-homebrew.darwinModules.nix-homebrew
           home-manager.darwinModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
