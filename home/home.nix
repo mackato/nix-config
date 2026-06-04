@@ -82,10 +82,11 @@
       python = "python3";
       ob = "Obsidian";
       # nix-darwin（単一マシン構成。flake の darwinConfigurations.default を適用）
+      # flake のパスは ~/.zshrc.local の HOMEFILES_FLAKE（このリポジトリのクローン先の絶対パス）を参照する。
       # drs = darwin-rebuild switch: 日常の適用（flake.lock 不変なら GitHub API を叩かずトークン不要）
-      drs = "sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\$HOME/gh/mackato/homefiles#default\"";
+      drs = "sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\${HOMEFILES_FLAKE:?set HOMEFILES_FLAKE in ~/.zshrc.local}#default\"";
       # dru = darwin-rebuild update: input 更新を伴う適用（flake update は GitHub API を叩くのでトークンを渡す）
-      dru = "( cd \"\$HOME/gh/mackato/homefiles\" && NIX_CONFIG=\"access-tokens = github.com=\$(gh auth token)\" nix flake update ) && sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\$HOME/gh/mackato/homefiles#default\"";
+      dru = "( cd \"\${HOMEFILES_FLAKE:?set HOMEFILES_FLAKE in ~/.zshrc.local}\" && NIX_CONFIG=\"access-tokens = github.com=\$(gh auth token)\" nix flake update ) && sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\$HOMEFILES_FLAKE#default\"";
     };
 
     initContent = builtins.readFile ./files/zsh/init.zsh;
