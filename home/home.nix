@@ -13,6 +13,8 @@
     pkgs.nkf
     pkgs.nmap
     pkgs.tree
+    pkgs.ripgrep
+    pkgs.fd
     pkgs.wget
     pkgs.awscli2
     pkgs.jq
