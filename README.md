@@ -1,6 +1,6 @@
 # homefiles
 
-Home 環境（このユーザー単位の CLI ツール・dotfiles・各種設定）を Nix で宣言的・再現可能・rollback 可能に管理する private リポジトリ。
+Home 環境（このユーザー単位の CLI ツール・dotfiles・各種設定）を Nix で宣言的・再現可能・rollback 可能に管理するリポジトリ。
 
 ## スコープ
 
