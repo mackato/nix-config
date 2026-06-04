@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## このリポジトリの性質
 
-macOS（hostname `default` / aarch64-darwin）の **home 環境を nix-darwin + home-manager で宣言管理する flake**。対象はユーザー単位の CLI・dotfiles・GUI アプリ・system/nix 設定。単一マシン構成で、`flake.nix` の `darwinConfigurations."default"` がエントリ。
+macOS（aarch64-darwin）の **home 環境を nix-darwin + home-manager で宣言管理する flake**。対象はユーザー単位の CLI・dotfiles・GUI アプリ・system/nix 設定。単一マシン構成で、`flake.nix` の `darwinConfigurations.default` がエントリ（ホスト名には依存しない）。
 
 ## 適用・検証コマンド
 
@@ -14,6 +14,7 @@ macOS（hostname `default` / aarch64-darwin）の **home 環境を nix-darwin + 
     /run/current-system/sw/bin/darwin-rebuild build --flake ~/gh/mackato/homefiles#default
   ```
   生成された設定値の確認は `nix eval --raw .#darwinConfigurations.default.config.<path>` が使える。
+- **lint / format（編集後・sudo 不要）**: `nix fmt`（nixfmt で整形）/ `nix flake check`（nixfmt・statix・deadnix を検証、CI と同一）/ `nix develop`（ツール入り開発シェル）。
 - **適用（switch）**: alias `drs`（= darwin-rebuild switch）。**sudo パスワードが必要なので対話端末で実行**。Claude のセッションからは流せない（build までで止めてユーザーに switch を依頼する）。
 - **input 更新を伴う適用**: alias `dru`（= flake update してから switch）。
 
@@ -27,7 +28,9 @@ macOS（hostname `default` / aarch64-darwin）の **home 環境を nix-darwin + 
 
 | ファイル | 役割 |
 | --- | --- |
-| `flake.nix` | inputs（nixpkgs-unstable / nix-darwin / home-manager / nix-homebrew、すべて nixpkgs を follows）と `darwinConfigurations."default"` |
+| `flake.nix` | inputs（nixpkgs-unstable / nix-darwin / home-manager / nix-homebrew、すべて nixpkgs を follows）と `darwinConfigurations.default`・`formatter`・`checks`・`devShells` |
+| `.github/workflows/ci.yml` | push / PR 時に Linux で `nix flake check`（nixfmt・statix・deadnix）を実行。darwin の実ビルドは CI 対象外 |
+| `statix.toml` | statix 設定。dotted notation は意図的なので `repeated_keys` を無効化 |
 | `darwin/configuration.nix` | system/nix 設定・`system.primaryUser`・`nix-homebrew`（Homebrew 本体）・`homebrew.casks`（GUI アプリ） |
 | `home/home.nix` | `home.packages`（CLI）・`programs.*`（git/gpg/gh/starship/zsh）・`home.file`（静的 dotfiles） |
 | `home/files/` | home.nix が参照する静的ファイル。`zsh/init.zsh`→`programs.zsh.initContent`、`zsh/profile.zsh`→`profileExtra`、`ghostty/`・`zed/`・`claude/` |
@@ -37,7 +40,7 @@ macOS（hostname `default` / aarch64-darwin）の **home 環境を nix-darwin + 
 - GUI アプリ → **`homebrew.casks`**（`darwin/configuration.nix`）。
 - Homebrew 本体 → **nix-homebrew**（既存環境は `autoMigrate` で引き継ぐ）。
 - プロジェクト単位の環境 → **devbox**（このリポの対象外）。mise は廃止。
-- Claude Code CLI → **宣言管理しない**（公式インストーラのまま。高頻度リリース＋自己アップデート優先、nixpkgs 版は遅延し self-update も効かないため）。VS Code 拡張も手動。
+- Claude Code CLI → **宣言管理しない**（公式インストーラのまま。高頻度リリース＋自己アップデート優先、nixpkgs 版は遅延し self-update も効かないため）。
 
 ## 編集時の注意
 
@@ -45,7 +48,7 @@ macOS（hostname `default` / aarch64-darwin）の **home 環境を nix-darwin + 
 - **`home/files/claude/CLAUDE.md` はこのリポの開発ガイドではない**。ユーザーのグローバル `~/.claude/CLAUDE.md` を配布するための中身なので、リポ運用ルールと混同して編集しない。
 - **git 設定は `programs.git.settings`**（新スキーマ）を使う。旧 `userName/aliases/extraConfig` は deprecation。書き出し先は XDG の `~/.config/git/config`。
 - **PATH 順**: `profile.zsh` で `brew shellenv` を先に積み、`profileExtra` で nix profile を再前置するので、重複する CLI は nix 版が優先される。
-- **shellAliases に実行時シェル変数を埋めるとき**: Nix のダブルクォート文字列内では `$` を `\$`、`${...}` を `\${...}` とエスケープする（home-manager がシングルクォート alias を生成し、展開は実行時に遅延される）。ホスト名は `~/.zshrc.local` の `DARWIN_HOST` から与える。
+- **shellAliases に実行時シェル変数を埋めるとき**: Nix のダブルクォート文字列内では `$` を `\$`、`${...}` を `\${...}` とエスケープする（home-manager がシングルクォート alias を生成し、展開は実行時に遅延される）。
 - **秘匿値・マシン固有値は `~/.zshrc.local`**（リポ外・未追跡、`init.zsh` が source）。リポには絶対に入れない。
 - `system.stateVersion`（nix-darwin）と `home.stateVersion`（home-manager）は安易に変更しない。
 

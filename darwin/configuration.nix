@@ -1,7 +1,7 @@
-{ ... }:
+_:
 
 {
-  # このマシン (default / aarch64-darwin) のプラットフォーム。
+  # このマシン (aarch64-darwin) のプラットフォーム。
   nixpkgs.hostPlatform = "aarch64-darwin";
 
   # op (1Password CLI) など unfree パッケージを許可する。
@@ -55,7 +55,6 @@
       "slack"
       "zed"
     ];
-    # VS Code 拡張は宣言しない（手動管理）。
   };
 
   # nix-darwin の state version。新規導入時の現行値。

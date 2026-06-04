@@ -81,11 +81,11 @@
       g = "git";
       python = "python3";
       ob = "Obsidian";
-      # nix-darwin（ホスト名は ~/.zshrc.local の DARWIN_HOST で与える）
+      # nix-darwin（単一マシン構成。flake の darwinConfigurations.default を適用）
       # drs = darwin-rebuild switch: 日常の適用（flake.lock 不変なら GitHub API を叩かずトークン不要）
-      drs = "sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\$HOME/gh/mackato/homefiles#\${DARWIN_HOST}\"";
+      drs = "sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\$HOME/gh/mackato/homefiles#default\"";
       # dru = darwin-rebuild update: input 更新を伴う適用（flake update は GitHub API を叩くのでトークンを渡す）
-      dru = "( cd \"\$HOME/gh/mackato/homefiles\" && NIX_CONFIG=\"access-tokens = github.com=\$(gh auth token)\" nix flake update ) && sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\$HOME/gh/mackato/homefiles#\${DARWIN_HOST}\"";
+      dru = "( cd \"\$HOME/gh/mackato/homefiles\" && NIX_CONFIG=\"access-tokens = github.com=\$(gh auth token)\" nix flake update ) && sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\$HOME/gh/mackato/homefiles#default\"";
     };
 
     initContent = builtins.readFile ./files/zsh/init.zsh;
