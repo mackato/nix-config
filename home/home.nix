@@ -67,9 +67,9 @@
 
     shellAliases = {
       # Claude Code
-      cc = "claude --dangerously-skip-permissions";
-      ccp = "claude --permission-mode plan";
-      ccw = "claude --dangerously-skip-permissions --worktree";
+      cc = "claude --allow-dangerously-skip-permissions";
+      ccp = "claude --permission-mode plan --allow-dangerously-skip-permissions";
+      ccw = "claude --allow-dangerously-skip-permissions --worktree";
       # Devbox
       dbx = "devbox";
       dbr = "devbox run";
