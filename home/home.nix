@@ -18,6 +18,7 @@
     pkgs.wget
     pkgs.awscli2
     pkgs.jq
+    pkgs.uv
     pkgs._1password-cli
     pkgs.pinentry_mac
   ];
