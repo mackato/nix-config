@@ -10,17 +10,17 @@
   # CLI util / 開発 CLI。git/gnupg/gh/starship は programs.* が個別に導入する。
   # op (_1password-cli) は unfree（darwin の allowUnfree で許可済み）。
   home.packages = [
+    pkgs._1password-cli
+    pkgs.awscli2
+    pkgs.fd
+    pkgs.jq
     pkgs.nkf
     pkgs.nmap
-    pkgs.tree
-    pkgs.ripgrep
-    pkgs.fd
-    pkgs.wget
-    pkgs.awscli2
-    pkgs.jq
-    pkgs.uv
-    pkgs._1password-cli
     pkgs.pinentry_mac
+    pkgs.ripgrep
+    pkgs.tree
+    pkgs.uv
+    pkgs.wget
   ];
 
   programs.git = {
