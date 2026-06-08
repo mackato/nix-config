@@ -44,6 +44,22 @@ nix develop        # nixfmt・statix・deadnix が入った開発シェル
 
 ## bootstrap（新マシン or 初回導入）
 
+### かんたんセットアップ（推奨）
+
+新マシン/既存マシン共通。Nix 未導入なら導入し、clone・`~/.zshrc.local` 生成・初回 switch まで一気に行う:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/mackato/homefiles/main/setup.sh | bash
+```
+
+- Apple Silicon (aarch64-darwin) 前提。通常ユーザーで実行する（途中で sudo パスワードを求められる）。Xcode CLT は不要。
+- clone 先は既定で `~/src/homefiles`（`HOMEFILES_FLAKE` 設定済みならそれを使う）。
+- `~/.zshrc.local` は無い場合のみ minimum 雛形を作成し、既存ファイルは上書きしない。
+- 既存マシンでは Nix 導入をスキップし、`/etc` 退避も衝突時のみ行う。
+- 処理の正本は `setup.sh`。下記の手動手順は同スクリプトが内部で行う内容の説明。
+
+### 手動手順
+
 前提: Nix（multi-user）が導入済み。Homebrew 本体は nix-homebrew が導入・管理する（既存環境は `autoMigrate` で引き継ぐ）。
 
 > 注意: `homebrew.onActivation.cleanup = "uninstall"` のため、宣言（`darwin/configuration.nix` の `casks`）に無い cask・formula は switch 時に自動アンインストールされる。CLI は nix/home-manager・プロジェクトは devbox 管理なので、手動導入の brew formula は残らない。
