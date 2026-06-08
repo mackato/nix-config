@@ -91,6 +91,7 @@ else
 export HOMEFILES_FLAKE="$REPO"
 export GPG_TTY="\${TTY}"
 EOF
+  chmod 600 "$ZLOCAL"
 fi
 
 # --- 4. /etc 衝突ファイルの退避（初回のみ・冪等） -----------------------
