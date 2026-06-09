@@ -110,19 +110,22 @@ fi
 # --- 5. 初回 switch ------------------------------------------------------
 # flakes を NIX_CONFIG で明示有効化（環境側で未有効でも switch が通るように）。
 # GitHub API レート制限(403)対策: GITHUB_TOKEN があれば access-tokens も渡す。
+# NIX_CONFIG は環境変数として sudo に引き継ぐ（--preserve-env）。`env VAR=...` で
+# argv に載せるとトークンが ps から他ユーザーに見えるため、それを避ける。
 NIX_CONFIG_VAL="extra-experimental-features = nix-command flakes"
 if [ -n "${GITHUB_TOKEN:-}" ]; then
   NIX_CONFIG_VAL="$NIX_CONFIG_VAL
 access-tokens = github.com=$GITHUB_TOKEN"
 fi
+export NIX_CONFIG="$NIX_CONFIG_VAL"
 
 DARWIN_REBUILD="/run/current-system/sw/bin/darwin-rebuild"
 if [ -x "$DARWIN_REBUILD" ]; then
   log "既存 nix-darwin を switch します（sudo パスワードを求められます）。"
-  sudo env "NIX_CONFIG=$NIX_CONFIG_VAL" "$DARWIN_REBUILD" switch --flake "$REPO#default"
+  sudo --preserve-env=NIX_CONFIG "$DARWIN_REBUILD" switch --flake "$REPO#default"
 else
   log "初回 nix-darwin を switch します（sudo パスワードを求められます）。"
-  sudo env "NIX_CONFIG=$NIX_CONFIG_VAL" "$NIX_BIN" run nix-darwin -- switch --flake "$REPO#default"
+  sudo --preserve-env=NIX_CONFIG "$NIX_BIN" run nix-darwin -- switch --flake "$REPO#default"
 fi
 
 log "完了しました。新しいターミナルを開く（または exec zsh -l）と drs/dru が使えます。"
