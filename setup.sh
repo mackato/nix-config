@@ -22,6 +22,8 @@ DEFAULT_REPO="$HOME/src/homefiles"
 
 log() { printf '\n==> %s\n' "$*"; }
 die() { printf '\nError: %s\n' "$*" >&2; exit 1; }
+# $1 が homefiles の checkout か（flake + darwin 設定の有無で判定）。
+is_homefiles_repo() { [ -f "$1/flake.nix" ] && [ -f "$1/darwin/configuration.nix" ]; }
 
 # --- 0. ガード -----------------------------------------------------------
 [ "$(uname -s)" = "Darwin" ] || die "macOS 専用です（uname=$(uname -s)）。"
@@ -53,7 +55,7 @@ REPO=""
 SRC="${BASH_SOURCE[0]:-}"
 if [ -f "$SRC" ]; then
   SCRIPT_DIR="$(cd "$(dirname "$SRC")" && pwd)"
-  if [ -f "$SCRIPT_DIR/flake.nix" ] && [ -f "$SCRIPT_DIR/darwin/configuration.nix" ]; then
+  if is_homefiles_repo "$SCRIPT_DIR"; then
     REPO="$SCRIPT_DIR"
     log "リポジトリ内から実行されています: $REPO"
   fi
@@ -62,7 +64,9 @@ fi
 # curl パイプ実行など repo 外からの起動。
 if [ -z "$REPO" ]; then
   REPO="${HOMEFILES_FLAKE:-$DEFAULT_REPO}"
-  if [ -d "$REPO/.git" ]; then
+  # .git は worktree だとファイルになるため -e で見る。flake/darwin 設定が揃う
+  # ディレクトリは .git が無くても既存扱い（tarball 展開等）。
+  if [ -e "$REPO/.git" ] || is_homefiles_repo "$REPO"; then
     log "既存の clone を使用します: $REPO"
   else
     log "リポジトリを clone します: $REPO"
