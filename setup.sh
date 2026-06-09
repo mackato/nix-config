@@ -28,8 +28,8 @@ die() { printf '\nError: %s\n' "$*" >&2; exit 1; }
 [ "$(uname -m)" = "arm64" ] || die "Apple Silicon (arm64) 専用です（uname -m=$(uname -m)）。"
 [ "$(id -u)" != "0" ] || die "root では実行しないでください。通常ユーザーで実行すると必要時に sudo を求めます。"
 
-# --- 2. Nix 導入（未導入時のみ） ----------------------------------------
-# clone（手順1）より先に Nix を入れる。git 実体が無いマシンで nix の git を使うため。
+# --- 1. Nix 導入（未導入時のみ） ----------------------------------------
+# clone（手順 2）より先に Nix を入れる。git 実体が無いマシンで nix の git を使うため。
 NIX_DAEMON_SH="/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
 if command -v nix >/dev/null 2>&1 || [ -e "$NIX_DAEMON_SH" ]; then
   log "Nix は既に導入済み。スキップします。"
@@ -45,7 +45,7 @@ if ! command -v nix >/dev/null 2>&1 && [ -e "$NIX_DAEMON_SH" ]; then
 fi
 command -v nix >/dev/null 2>&1 || die "nix が見つかりません。新しいターミナルを開いて再実行してください。"
 
-# --- 1. リポジトリ位置の決定 / clone ------------------------------------
+# --- 2. リポジトリ位置の決定 / clone ------------------------------------
 # clone 済みローカル実行なら、このスクリプトの置かれた repo を使う。
 REPO=""
 SRC="${BASH_SOURCE[0]:-}"
@@ -106,21 +106,21 @@ if [ -e /etc/nix/nix.conf ] && [ ! -e /etc/nix/nix.conf.before-nix-darwin ]; the
 fi
 
 # --- 5. 初回 switch ------------------------------------------------------
-# GitHub API レート制限(403)対策: GITHUB_TOKEN があれば渡す。
-NIX_CONFIG_ENV=()
+# flakes を NIX_CONFIG で明示有効化（環境側で未有効でも switch が通るように）。
+# GitHub API レート制限(403)対策: GITHUB_TOKEN があれば access-tokens も渡す。
+NIX_CONFIG_VAL="extra-experimental-features = nix-command flakes"
 if [ -n "${GITHUB_TOKEN:-}" ]; then
-  NIX_CONFIG_ENV=(env "NIX_CONFIG=access-tokens = github.com=$GITHUB_TOKEN")
+  NIX_CONFIG_VAL="$NIX_CONFIG_VAL
+access-tokens = github.com=$GITHUB_TOKEN"
 fi
 
 DARWIN_REBUILD="/run/current-system/sw/bin/darwin-rebuild"
 if [ -x "$DARWIN_REBUILD" ]; then
   log "既存 nix-darwin を switch します（sudo パスワードを求められます）。"
-  sudo "${NIX_CONFIG_ENV[@]}" "$DARWIN_REBUILD" switch --flake "$REPO#default"
+  sudo env "NIX_CONFIG=$NIX_CONFIG_VAL" "$DARWIN_REBUILD" switch --flake "$REPO#default"
 else
   log "初回 nix-darwin を switch します（sudo パスワードを求められます）。"
-  sudo "${NIX_CONFIG_ENV[@]}" nix run \
-    --extra-experimental-features 'nix-command flakes' \
-    nix-darwin -- switch --flake "$REPO#default"
+  sudo env "NIX_CONFIG=$NIX_CONFIG_VAL" nix run nix-darwin -- switch --flake "$REPO#default"
 fi
 
 log "完了しました。新しいターミナルを開く（または exec zsh -l）と drs/dru が使えます。"
