@@ -34,6 +34,9 @@ is_homefiles_repo() { [ -f "$1/flake.nix" ] && [ -f "$1/darwin/configuration.nix
 # clone（手順 2）より先に Nix を入れる。git 実体が無いマシンで nix の git を使うため。
 NIX_DAEMON_SH="/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
 if command -v nix >/dev/null 2>&1 || [ -e "$NIX_DAEMON_SH" ]; then
+  if command -v nix >/dev/null 2>&1 && [ ! -e "$NIX_DAEMON_SH" ]; then
+    die "single-user の Nix と思われます。このリポジトリは multi-user Nix を前提とします（README 参照）。"
+  fi
   log "Nix は既に導入済み。スキップします。"
 else
   log "Nix を導入します（Determinate Systems nix-installer）。"
@@ -64,15 +67,13 @@ fi
 # curl パイプ実行など repo 外からの起動。
 if [ -z "$REPO" ]; then
   REPO="${HOMEFILES_FLAKE:-$DEFAULT_REPO}"
-  # .git は worktree だとファイルになるため -e で見る。flake/darwin 設定が揃う
-  # ディレクトリは .git が無くても既存扱い（tarball 展開等）。
-  if [ -e "$REPO/.git" ] || is_homefiles_repo "$REPO"; then
+  # flake/darwin 設定が揃うかで既存判定（worktree も tarball 展開も .git の有無に依らず拾える）。
+  if is_homefiles_repo "$REPO"; then
     log "既存の clone を使用します: $REPO"
+  elif [ -d "$REPO" ] && [ -n "$(ls -A "$REPO" 2>/dev/null)" ]; then
+    die "$REPO は存在しますが homefiles の checkout ではありません（別リポジトリ/非空ディレクトリ）。退避するか HOMEFILES_FLAKE を変更してください。"
   else
     log "リポジトリを clone します: $REPO"
-    if [ -d "$REPO" ] && [ -n "$(ls -A "$REPO" 2>/dev/null)" ]; then
-      die "$REPO が存在し空ではありません。退避するか HOMEFILES_FLAKE を変更してください。"
-    fi
     if [ -x /usr/bin/git ] && xcode-select -p >/dev/null 2>&1; then
       git clone "$REPO_URL" "$REPO"
     else
