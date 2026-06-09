@@ -75,7 +75,7 @@ if [ -z "$REPO" ]; then
   else
     log "リポジトリを clone します: $REPO"
     if [ -x /usr/bin/git ] && xcode-select -p >/dev/null 2>&1; then
-      git clone "$REPO_URL" "$REPO"
+      /usr/bin/git clone "$REPO_URL" "$REPO"
     else
       # CLT 未導入で git 実体が無い → nix の git を使う（CLT の GUI プロンプト回避）。
       log "git 実体が無いため nix の git で clone します。"
