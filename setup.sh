@@ -44,6 +44,8 @@ if ! command -v nix >/dev/null 2>&1 && [ -e "$NIX_DAEMON_SH" ]; then
   . "$NIX_DAEMON_SH"
 fi
 command -v nix >/dev/null 2>&1 || die "nix が見つかりません。新しいターミナルを開いて再実行してください。"
+# sudo の secure_path に nix の bin が無くても動くよう絶対パスで保持する。
+NIX_BIN="$(command -v nix)"
 
 # --- 2. リポジトリ位置の決定 / clone ------------------------------------
 # clone 済みローカル実行なら、このスクリプトの置かれた repo を使う。
@@ -120,7 +122,7 @@ if [ -x "$DARWIN_REBUILD" ]; then
   sudo env "NIX_CONFIG=$NIX_CONFIG_VAL" "$DARWIN_REBUILD" switch --flake "$REPO#default"
 else
   log "初回 nix-darwin を switch します（sudo パスワードを求められます）。"
-  sudo env "NIX_CONFIG=$NIX_CONFIG_VAL" nix run nix-darwin -- switch --flake "$REPO#default"
+  sudo env "NIX_CONFIG=$NIX_CONFIG_VAL" "$NIX_BIN" run nix-darwin -- switch --flake "$REPO#default"
 fi
 
 log "完了しました。新しいターミナルを開く（または exec zsh -l）と drs/dru が使えます。"
