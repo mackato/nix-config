@@ -1,30 +1,22 @@
+# 個人レイヤーの home 層。会社標準（共通 CLI util・gh・git の中立設定）は airs/nix-config の
+# homeModules.base が宣言する。home.username / homeDirectory / stateVersion は
+# airs の mkDarwinConfig が username 引数から導出する。
 { config, pkgs, ... }:
 
 {
-  home.username = "kato";
-  home.homeDirectory = "/Users/kato";
-
-  # home-manager の state version (現行 home-manager リリース)。
-  home.stateVersion = "26.05";
-
-  # CLI util / 開発 CLI。git/gnupg/gh/starship は programs.* が個別に導入する。
-  # op (_1password-cli) は unfree（darwin の allowUnfree で許可済み）。
+  # 個人の CLI util / 開発 CLI。gnupg/starship は programs.* が個別に導入する。
+  # op (_1password-cli) は unfree（airs 側の allowUnfree で許可済み）。
   home.packages = [
     pkgs._1password-cli
     pkgs.awscli2
-    pkgs.fd
-    pkgs.jq
-    pkgs.nkf
     pkgs.nmap
     pkgs.pinentry_mac
-    pkgs.ripgrep
-    pkgs.tree
     pkgs.uv
-    pkgs.wget
   ];
 
+  # git の identity・署名・alias・ignores は個人設定。
+  # 中立設定（enable / init.defaultBranch / fetch.prune）は airs 側が mkDefault で宣言する。
   programs.git = {
-    enable = true;
     settings = {
       user.name = "Masakuni Kato";
       user.email = "7091+mackato@users.noreply.github.com";
@@ -34,8 +26,6 @@
         co = "checkout";
         st = "status";
       };
-      fetch.prune = true;
-      init.defaultBranch = "main";
       # gpg.program のハードコード (/opt/homebrew/bin/gpg) は撤去し nix の gpg を使う。
       gpg.program = "${pkgs.gnupg}/bin/gpg";
     };
@@ -47,8 +37,6 @@
   };
 
   programs.gpg.enable = true;
-
-  programs.gh.enable = true;
 
   programs.starship.enable = true;
 
@@ -82,12 +70,13 @@
       g = "git";
       python = "python3";
       ob = "Obsidian";
-      # nix-darwin（単一マシン構成。flake の darwinConfigurations.default を適用）
-      # flake のパスは ~/.zshrc.local の HOMEFILES_FLAKE（このリポジトリのクローン先の絶対パス）を参照する。
+      # nix-darwin（単一マシン構成）。flake のパスは ~/.zshrc.local の NIX_CONFIG_FLAKE
+      # （このリポジトリのクローン先の絶対パス）、適用する darwinConfigurations の属性名は
+      # NIX_CONFIG_ATTR（未設定なら default）を参照する。
       # drs = darwin-rebuild switch: 日常の適用（flake.lock 不変なら GitHub API を叩かずトークン不要）
-      drs = "sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\${HOMEFILES_FLAKE:?set HOMEFILES_FLAKE in ~/.zshrc.local}#default\"";
+      drs = "sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\${NIX_CONFIG_FLAKE:?set NIX_CONFIG_FLAKE in ~/.zshrc.local}#\${NIX_CONFIG_ATTR:-default}\"";
       # dru = darwin-rebuild update: input 更新を伴う適用（flake update は GitHub API を叩くのでトークンを渡す）
-      dru = "( cd \"\${HOMEFILES_FLAKE:?set HOMEFILES_FLAKE in ~/.zshrc.local}\" && NIX_CONFIG=\"access-tokens = github.com=\$(gh auth token)\" nix flake update ) && sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\$HOMEFILES_FLAKE#default\"";
+      dru = "( cd \"\${NIX_CONFIG_FLAKE:?set NIX_CONFIG_FLAKE in ~/.zshrc.local}\" && NIX_CONFIG=\"access-tokens = github.com=\$(gh auth token)\" nix flake update ) && sudo /run/current-system/sw/bin/darwin-rebuild switch --flake \"\$NIX_CONFIG_FLAKE#\${NIX_CONFIG_ATTR:-default}\"";
     };
 
     initContent = builtins.readFile ./files/zsh/init.zsh;

@@ -1,27 +1,17 @@
 {
-  description = "kato home environment (nix-darwin + home-manager)";
+  description = "kato personal layer on airs/nix-config (nix-darwin + home-manager)";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-
-    nix-darwin.url = "github:nix-darwin/nix-darwin";
-    nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
-
-    home-manager.url = "github:nix-community/home-manager";
-    home-manager.inputs.nixpkgs.follows = "nixpkgs";
-
-    nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+    # 会社標準レイヤー。nixpkgs / nix-darwin / home-manager / nix-homebrew は
+    # この input 経由で解決する（dru の flake update で nested input も更新される）。
+    airs.url = "github:airs/nix-config";
   };
 
   outputs =
-    {
-      nixpkgs,
-      nix-darwin,
-      home-manager,
-      nix-homebrew,
-      ...
-    }:
+    { airs, ... }:
     let
+      # formatter / checks / devShells 用の nixpkgs は airs の input を再利用する。
+      inherit (airs.inputs) nixpkgs;
       # 開発機(aarch64-darwin)と CI(x86_64-linux)の 2 system だけを対象にする。
       # flake-utils を入れず nixpkgs だけで forAllSystems 相当を手書き(YAGNI)。
       systems = [
@@ -31,20 +21,13 @@
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
     in
     {
-      # ホスト名直書きをやめ汎用キー default に。単一マシン構成なので属性キーはラベルでよい。
-      darwinConfigurations.default = nix-darwin.lib.darwinSystem {
-        modules = [
-          ./darwin/configuration.nix
-          nix-homebrew.darwinModules.nix-homebrew
-          home-manager.darwinModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            # 既存の sync.sh 由来 symlink・実ファイルと衝突した場合は失敗させず退避する。
-            home-manager.backupFileExtension = "hm-bak";
-            home-manager.users.kato = import ./home/home.nix;
-          }
-        ];
+      # 会社標準（darwinModules.base / homeModules.base・home-manager 配線・stateVersion）は
+      # airs の mkDarwinConfig が組み立てる。ここでは個人レイヤーのモジュールだけを渡す。
+      # 単一マシン構成なので属性キーはラベルでよい（汎用キー default）。
+      darwinConfigurations.default = airs.lib.mkDarwinConfig {
+        username = "kato";
+        extraModules = [ ./darwin/configuration.nix ];
+        extraHomeModules = [ ./home/home.nix ];
       };
 
       # nix fmt 用。nixfmt 公式の treefmt ラッパー(ディレクトリ再帰・nix fmt 連携に対応)。

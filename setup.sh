@@ -3,7 +3,7 @@
 # setup.sh — Nix インストール〜初回 bootstrap を一気通貫で行う。
 # 新マシン/既存マシン共通。冪等（再実行安全）。
 #
-#   curl -fsSL https://raw.githubusercontent.com/mackato/homefiles/main/setup.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/mackato/nix-config/main/setup.sh | bash
 #
 # やること:
 #   1. Nix 未導入なら Determinate Systems nix-installer で導入
@@ -17,13 +17,13 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/mackato/homefiles.git"
-DEFAULT_REPO="$HOME/src/homefiles"
+REPO_URL="https://github.com/mackato/nix-config.git"
+DEFAULT_REPO="$HOME/src/nix-config"
 
 log() { printf '\n==> %s\n' "$*"; }
 die() { printf '\nError: %s\n' "$*" >&2; exit 1; }
-# $1 が homefiles の checkout か（flake + darwin 設定の有無で判定）。
-is_homefiles_repo() { [ -f "$1/flake.nix" ] && [ -f "$1/darwin/configuration.nix" ]; }
+# $1 が nix-config の checkout か（flake + darwin 設定の有無で判定）。
+is_nix_config_repo() { [ -f "$1/flake.nix" ] && [ -f "$1/darwin/configuration.nix" ]; }
 
 # --- 0. ガード -----------------------------------------------------------
 [ "$(uname -s)" = "Darwin" ] || die "macOS 専用です（uname=$(uname -s)）。"
@@ -58,7 +58,7 @@ REPO=""
 SRC="${BASH_SOURCE[0]:-}"
 if [ -f "$SRC" ]; then
   SCRIPT_DIR="$(cd "$(dirname "$SRC")" && pwd)"
-  if is_homefiles_repo "$SCRIPT_DIR"; then
+  if is_nix_config_repo "$SCRIPT_DIR"; then
     REPO="$SCRIPT_DIR"
     log "リポジトリ内から実行されています: $REPO"
   fi
@@ -66,12 +66,12 @@ fi
 
 # curl パイプ実行など repo 外からの起動。
 if [ -z "$REPO" ]; then
-  REPO="${HOMEFILES_FLAKE:-$DEFAULT_REPO}"
+  REPO="${NIX_CONFIG_FLAKE:-$DEFAULT_REPO}"
   # flake/darwin 設定が揃うかで既存判定（worktree も tarball 展開も .git の有無に依らず拾える）。
-  if is_homefiles_repo "$REPO"; then
+  if is_nix_config_repo "$REPO"; then
     log "既存の clone を使用します: $REPO"
   elif [ -d "$REPO" ] && [ -n "$(ls -A "$REPO" 2>/dev/null)" ]; then
-    die "$REPO は存在しますが homefiles の checkout ではありません（別リポジトリ/非空ディレクトリ）。退避するか HOMEFILES_FLAKE を変更してください。"
+    die "$REPO は存在しますが nix-config の checkout ではありません（別リポジトリ/非空ディレクトリ）。退避するか NIX_CONFIG_FLAKE を変更してください。"
   else
     log "リポジトリを clone します: $REPO"
     if [ -x /usr/bin/git ] && xcode-select -p >/dev/null 2>&1; then
@@ -95,7 +95,7 @@ else
 # Local secrets / machine-specific overrides. NOT tracked in this repo.
 # 追加項目（PATH 拡張やトークン等）は README の雛形を参照。
 # このリポジトリの clone 先の絶対パス（drs/dru が参照する）。
-export HOMEFILES_FLAKE="$REPO"
+export NIX_CONFIG_FLAKE="$REPO"
 export GPG_TTY="\${TTY}"
 EOF
   chmod 600 "$ZLOCAL"
