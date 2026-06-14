@@ -1,8 +1,7 @@
- ---
- name: cycle
- description: 1 タスクを plan → 実装 → PR → レビュー対応ループ → マージ →
- 後片付けまで一気通貫で回す。機能追加・修正をブランチ/worktree 上で完結させたいときに使う。
- ---
+---
+name: cycle
+description: 1 タスクを plan → 実装 → PR → レビュー対応ループ → マージ → 後片付けまで一気通貫で回す。機能追加・修正をブランチ/worktree 上で完結させたいときに使う。
+---
 
 # /cycle
 
