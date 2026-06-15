@@ -98,4 +98,5 @@
   home.file.".config/ghostty/config".source = ./files/ghostty/config;
   home.file.".config/zed/settings.json".source = ./files/zed/settings.json;
   home.file.".claude/CLAUDE.md".source = ./files/claude/CLAUDE.md;
+  home.file.".claude/skills/cycle/SKILL.md".source = ./files/claude/skills/cycle/SKILL.md;
 }
