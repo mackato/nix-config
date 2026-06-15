@@ -19,7 +19,7 @@ let
   ccDir = "${repoRoot}/home/files/claude";
   mkLink = config.lib.file.mkOutOfStoreSymlink;
 
-  # Claude Code の user スコープ MCP サーバ（ともに npx 起動の stdio サーバ。node が前提）。
+  # Claude Code の user スコープ MCP サーバ（いずれも npx 起動の stdio サーバ。node が前提）。
   # command は ${config.home.profileDirectory}/bin/npx（= pkgs.nodejs の npx）を絶対指定し、
   # spawn 時の PATH や Homebrew npx に依存しないようにする。
   mcpServers = {
@@ -38,6 +38,14 @@ let
       args = [
         "-y"
         "@playwright/mcp@latest"
+      ];
+    };
+    chrome-devtools = {
+      type = "stdio";
+      command = "${config.home.profileDirectory}/bin/npx";
+      args = [
+        "-y"
+        "chrome-devtools-mcp@latest"
       ];
     };
   };
@@ -150,12 +158,12 @@ in
 
   # Claude Code の MCP は user スコープでも ~/.claude.json（Claude が常時書き込むステートフルファイル）に
   # 保存されるため、CLAUDE.md/skills のような symlink 宣言管理ができない。switch のたびに top-level の
-  # mcpServers へ上記サーバを冪等に注入し、他サーバ（chrome-devtools 等）と Claude 側の他状態（projects 等）は
+  # mcpServers へ上記サーバを冪等に注入し、宣言外の他サーバと Claude 側の他状態（projects 等）は
   # 温存する。dry-run（DRY_RUN_CMD が非空）では mktemp/jq も含め副作用を一切出さずログのみにする。
   home.activation.claudeMcpServers = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     claudeJson="${config.home.homeDirectory}/.claude.json"
     if [ -n "''${DRY_RUN_CMD:-}" ]; then
-      echo "(dry-run) would merge context7/playwright into mcpServers of $claudeJson"
+      echo "(dry-run) would merge context7/playwright/chrome-devtools into mcpServers of $claudeJson"
     else
       # temp は同一ディレクトリにテンプレート付きで作る（BSD/GNU 両対応、かつ mv が atomic rename に
       # なり Claude が読むファイルの破損を防ぐ）。pipefail を効かせた subshell で実行し、cat 失敗時に
