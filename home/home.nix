@@ -3,6 +3,15 @@
 # airs の mkDarwinConfig が username 引数から導出する。
 { config, pkgs, ... }:
 
+let
+  # Claude Code(CC) / Codex CLI で共有する正本（このリポジトリの作業ツリー）の絶対パス。
+  # mkOutOfStoreSymlink は store ではなく作業ツリーを指す可変 symlink を張るため絶対パスが要る
+  # （編集が switch なしで即反映され、編集対象がそのまま git 追跡される）。クローン先は
+  # ~/.zshrc.local の NIX_CONFIG_FLAKE（drs が参照）と一致させる。
+  repoRoot = "${config.home.homeDirectory}/gh/mackato/nix-config";
+  ccDir = "${repoRoot}/home/files/claude";
+  mkLink = config.lib.file.mkOutOfStoreSymlink;
+in
 {
   # 個人の CLI util / 開発 CLI。gnupg/starship は programs.* が個別に導入する。
   # op (_1password-cli) は unfree（airs 側の allowUnfree で許可済み）。
@@ -97,6 +106,15 @@
   # 残りの静的 dotfiles。
   home.file.".config/ghostty/config".source = ./files/ghostty/config;
   home.file.".config/zed/settings.json".source = ./files/zed/settings.json;
-  home.file.".claude/CLAUDE.md".source = ./files/claude/CLAUDE.md;
-  home.file.".claude/skills/cycle/SKILL.md".source = ./files/claude/skills/cycle/SKILL.md;
+
+  # AI コーディングツールの共有設定。CC を正本（source of truth）とし、Codex は同一実体を参照する。
+  # 可変 symlink（mkOutOfStoreSymlink）で repo 作業ツリーを直接指すので、編集は switch なしで両者に反映される。
+  # CLAUDE.md は @import 等の CC 固有記法を含まず、Codex には literal テキストとして渡る（見出しの "CLAUDE.md" もそのまま表示される）。
+  # 指示ファイル: ~/.claude/CLAUDE.md と ~/.codex/AGENTS.md を同一実体（repo の CLAUDE.md）へ直接向ける（チェーンしない）。
+  home.file.".claude/CLAUDE.md".source = mkLink "${ccDir}/CLAUDE.md";
+  home.file.".codex/AGENTS.md".source = mkLink "${ccDir}/CLAUDE.md";
+  # skills: repo 管理スキルを ~/.claude/skills/ 配下に個別配置する（repo 外の既存スキルは温存される）。
+  home.file.".claude/skills/cycle".source = mkLink "${ccDir}/skills/cycle";
+  # Codex のユーザースキルは ~/.agents/skills。実ディレクトリ ~/.claude/skills を指し、全スキル（repo 管理＋既存）を共有する。
+  home.file.".agents/skills".source = mkLink "${config.home.homeDirectory}/.claude/skills";
 }
