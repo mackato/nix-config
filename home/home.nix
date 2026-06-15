@@ -1,7 +1,12 @@
 # 個人レイヤーの home 層。会社標準（共通 CLI util・gh・git の中立設定）は airs/nix-config の
 # homeModules.base が宣言する。home.username / homeDirectory / stateVersion は
 # airs の mkDarwinConfig が username 引数から導出する。
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   # Claude Code(CC) / Codex CLI で共有する正本（このリポジトリの作業ツリー）の絶対パス。
@@ -13,6 +18,29 @@ let
   repoRoot = "${config.home.homeDirectory}/gh/mackato/nix-config";
   ccDir = "${repoRoot}/home/files/claude";
   mkLink = config.lib.file.mkOutOfStoreSymlink;
+
+  # Claude Code の user スコープ MCP サーバ（ともに npx 起動の stdio サーバ。node が前提）。
+  # command は ${config.home.profileDirectory}/bin/npx（= pkgs.nodejs の npx）を絶対指定し、
+  # spawn 時の PATH や Homebrew npx に依存しないようにする。
+  mcpServers = {
+    context7 = {
+      type = "stdio";
+      command = "${config.home.profileDirectory}/bin/npx";
+      args = [
+        "-y"
+        "@upstash/context7-mcp"
+      ];
+    };
+    playwright = {
+      type = "stdio";
+      command = "${config.home.profileDirectory}/bin/npx";
+      # -y は初回 npx 実行時のインストール確認プロンプトを抑止する（非対話 spawn でのハング防止）。
+      args = [
+        "-y"
+        "@playwright/mcp@latest"
+      ];
+    };
+  };
 in
 {
   # 個人の CLI util / 開発 CLI。gnupg/starship は programs.* が個別に導入する。
@@ -21,6 +49,7 @@ in
     pkgs._1password-cli
     pkgs.awscli2
     pkgs.nmap
+    pkgs.nodejs
     pkgs.pinentry_mac
     pkgs.uv
   ];
@@ -119,4 +148,37 @@ in
   home.file.".claude/skills/cycle".source = mkLink "${ccDir}/skills/cycle";
   # Codex のユーザースキルは ~/.agents/skills。実ディレクトリ ~/.claude/skills を指し、全スキル（repo 管理＋既存）を共有する。
   home.file.".agents/skills".source = mkLink "${config.home.homeDirectory}/.claude/skills";
+
+  # Claude Code の MCP は user スコープでも ~/.claude.json（Claude が常時書き込むステートフルファイル）に
+  # 保存されるため、CLAUDE.md/skills のような symlink 宣言管理ができない。switch のたびに top-level の
+  # mcpServers へ上記サーバを冪等に注入し、他サーバ（chrome-devtools 等）と Claude 側の他状態（projects 等）は
+  # 温存する。dry-run（DRY_RUN_CMD が非空）では mktemp/jq も含め副作用を一切出さずログのみにする。
+  home.activation.claudeMcpServers = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    claudeJson="${config.home.homeDirectory}/.claude.json"
+    if [ -n "''${DRY_RUN_CMD:-}" ]; then
+      echo "(dry-run) would merge context7/playwright into mcpServers of $claudeJson"
+    else
+      # temp は同一ディレクトリにテンプレート付きで作る（BSD/GNU 両対応、かつ mv が atomic rename に
+      # なり Claude が読むファイルの破損を防ぐ）。pipefail を効かせた subshell で実行し、cat 失敗時に
+      # echo '{}' へフォールバックして既存状態を空で上書きする事故を防ぐ（cat 非ゼロ→パイプ非ゼロ→中断）。
+      # JSON は lib.escapeShellArg で安全にクォートする。jq 失敗時も元ファイルを残し temp を掃除して中断。
+      tmp="$(mktemp "$claudeJson.XXXXXX")" || exit 1
+      if (
+        set -o pipefail
+        { if [ -e "$claudeJson" ]; then cat "$claudeJson"; else echo '{}'; fi; } \
+          | ${pkgs.jq}/bin/jq \
+              --argjson servers ${lib.escapeShellArg (builtins.toJSON mcpServers)} \
+              '.mcpServers = (.mcpServers // {}) + $servers' \
+              > "$tmp"
+      ); then
+        mv "$tmp" "$claudeJson" || {
+          rm -f "$tmp"
+          exit 1
+        }
+      else
+        rm -f "$tmp"
+        exit 1
+      fi
+    fi
+  '';
 }
