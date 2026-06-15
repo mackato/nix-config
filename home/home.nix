@@ -34,7 +34,11 @@ let
     playwright = {
       type = "stdio";
       command = "${config.home.profileDirectory}/bin/npx";
-      args = [ "@playwright/mcp@latest" ];
+      # -y は初回 npx 実行時のインストール確認プロンプトを抑止する（非対話 spawn でのハング防止）。
+      args = [
+        "-y"
+        "@playwright/mcp@latest"
+      ];
     };
   };
 in
@@ -151,12 +155,18 @@ in
   # 温存する。$DRY_RUN_CMD はリダイレクトと相性が悪いので実書き込みする mv のみ包む（jq の出力先は捨てる temp）。
   home.activation.claudeMcpServers = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     claudeJson="${config.home.homeDirectory}/.claude.json"
-    tmp="$(mktemp)"
-    { [ -e "$claudeJson" ] && cat "$claudeJson" || echo '{}'; } \
-      | ${pkgs.jq}/bin/jq \
-          --argjson servers '${builtins.toJSON mcpServers}' \
-          '.mcpServers = (.mcpServers // {}) + $servers' \
-          > "$tmp" \
-      && $DRY_RUN_CMD mv "$tmp" "$claudeJson"
+    # temp は同一ディレクトリにテンプレート付きで作る（BSD/GNU 両対応、かつ mv が atomic rename に
+    # なり Claude が読むファイルの破損を防ぐ）。jq 失敗時は元ファイルを残し temp を掃除して中断する。
+    tmp="$(mktemp "$claudeJson.XXXXXX")"
+    if { [ -e "$claudeJson" ] && cat "$claudeJson" || echo '{}'; } \
+         | ${pkgs.jq}/bin/jq \
+             --argjson servers '${builtins.toJSON mcpServers}' \
+             '.mcpServers = (.mcpServers // {}) + $servers' \
+             > "$tmp"; then
+      $DRY_RUN_CMD mv "$tmp" "$claudeJson"
+    else
+      rm -f "$tmp"
+      exit 1
+    fi
   '';
 }
