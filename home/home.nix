@@ -162,7 +162,7 @@ in
       # なり Claude が読むファイルの破損を防ぐ）。pipefail を効かせた subshell で実行し、cat 失敗時に
       # echo '{}' へフォールバックして既存状態を空で上書きする事故を防ぐ（cat 非ゼロ→パイプ非ゼロ→中断）。
       # JSON は lib.escapeShellArg で安全にクォートする。jq 失敗時も元ファイルを残し temp を掃除して中断。
-      tmp="$(mktemp "$claudeJson.XXXXXX")"
+      tmp="$(mktemp "$claudeJson.XXXXXX")" || exit 1
       if (
         set -o pipefail
         { if [ -e "$claudeJson" ]; then cat "$claudeJson"; else echo '{}'; fi; } \
@@ -171,7 +171,10 @@ in
               '.mcpServers = (.mcpServers // {}) + $servers' \
               > "$tmp"
       ); then
-        mv "$tmp" "$claudeJson"
+        mv "$tmp" "$claudeJson" || {
+          rm -f "$tmp"
+          exit 1
+        }
       else
         rm -f "$tmp"
         exit 1
