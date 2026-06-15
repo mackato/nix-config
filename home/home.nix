@@ -1,7 +1,12 @@
 # 個人レイヤーの home 層。会社標準（共通 CLI util・gh・git の中立設定）は airs/nix-config の
 # homeModules.base が宣言する。home.username / homeDirectory / stateVersion は
 # airs の mkDarwinConfig が username 引数から導出する。
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   # Claude Code(CC) / Codex CLI で共有する正本（このリポジトリの作業ツリー）の絶対パス。
@@ -13,6 +18,25 @@ let
   repoRoot = "${config.home.homeDirectory}/gh/mackato/nix-config";
   ccDir = "${repoRoot}/home/files/claude";
   mkLink = config.lib.file.mkOutOfStoreSymlink;
+
+  # Claude Code の user スコープ MCP サーバ（ともに npx 起動の stdio サーバ。node が前提）。
+  # command は ${config.home.profileDirectory}/bin/npx（= pkgs.nodejs の npx）を絶対指定し、
+  # spawn 時の PATH や Homebrew npx に依存しないようにする。
+  mcpServers = {
+    context7 = {
+      type = "stdio";
+      command = "${config.home.profileDirectory}/bin/npx";
+      args = [
+        "-y"
+        "@upstash/context7-mcp"
+      ];
+    };
+    playwright = {
+      type = "stdio";
+      command = "${config.home.profileDirectory}/bin/npx";
+      args = [ "@playwright/mcp@latest" ];
+    };
+  };
 in
 {
   # 個人の CLI util / 開発 CLI。gnupg/starship は programs.* が個別に導入する。
@@ -21,6 +45,7 @@ in
     pkgs._1password-cli
     pkgs.awscli2
     pkgs.nmap
+    pkgs.nodejs
     pkgs.pinentry_mac
     pkgs.uv
   ];
@@ -119,4 +144,19 @@ in
   home.file.".claude/skills/cycle".source = mkLink "${ccDir}/skills/cycle";
   # Codex のユーザースキルは ~/.agents/skills。実ディレクトリ ~/.claude/skills を指し、全スキル（repo 管理＋既存）を共有する。
   home.file.".agents/skills".source = mkLink "${config.home.homeDirectory}/.claude/skills";
+
+  # Claude Code の MCP は user スコープでも ~/.claude.json（Claude が常時書き込むステートフルファイル）に
+  # 保存されるため、CLAUDE.md/skills のような symlink 宣言管理ができない。switch のたびに top-level の
+  # mcpServers へ上記サーバを冪等に注入し、他サーバ（chrome-devtools 等）と Claude 側の他状態（projects 等）は
+  # 温存する。$DRY_RUN_CMD はリダイレクトと相性が悪いので実書き込みする mv のみ包む（jq の出力先は捨てる temp）。
+  home.activation.claudeMcpServers = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    claudeJson="${config.home.homeDirectory}/.claude.json"
+    tmp="$(mktemp)"
+    { [ -e "$claudeJson" ] && cat "$claudeJson" || echo '{}'; } \
+      | ${pkgs.jq}/bin/jq \
+          --argjson servers '${builtins.toJSON mcpServers}' \
+          '.mcpServers = (.mcpServers // {}) + $servers' \
+          > "$tmp" \
+      && $DRY_RUN_CMD mv "$tmp" "$claudeJson"
+  '';
 }
