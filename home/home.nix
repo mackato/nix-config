@@ -6,8 +6,10 @@
 let
   # Claude Code(CC) / Codex CLI で共有する正本（このリポジトリの作業ツリー）の絶対パス。
   # mkOutOfStoreSymlink は store ではなく作業ツリーを指す可変 symlink を張るため絶対パスが要る
-  # （編集が switch なしで即反映され、編集対象がそのまま git 追跡される）。クローン先は
-  # ~/.zshrc.local の NIX_CONFIG_FLAKE（drs が参照）と一致させる。
+  # （編集が switch なしで即反映され、編集対象がそのまま git 追跡される）。eval 時に確定する
+  # 定数なので実行時の NIX_CONFIG_FLAKE は参照できない。clone を別の場所にする場合は、ここ・
+  # setup.sh の DEFAULT_REPO・~/.zshrc.local の NIX_CONFIG_FLAKE の 3 箇所を必ず揃えること
+  # （ズレると CC/Codex 用 symlink が dangling になり共有ファイルを読めない）。
   repoRoot = "${config.home.homeDirectory}/gh/mackato/nix-config";
   ccDir = "${repoRoot}/home/files/claude";
   mkLink = config.lib.file.mkOutOfStoreSymlink;

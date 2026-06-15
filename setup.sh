@@ -18,7 +18,8 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/mackato/nix-config.git"
-DEFAULT_REPO="$HOME/src/nix-config"
+# home/home.nix の repoRoot（CC/Codex 共有設定の out-of-store symlink 先）と一致させること。
+DEFAULT_REPO="$HOME/gh/mackato/nix-config"
 
 log() { printf '\n==> %s\n' "$*"; }
 die() { printf '\nError: %s\n' "$*" >&2; exit 1; }
