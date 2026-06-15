@@ -98,11 +98,10 @@ in
       # Claude Code
       cc = "claude --allow-dangerously-skip-permissions";
       ccp = "claude --permission-mode plan --allow-dangerously-skip-permissions";
+      ccr = "claude --allow-dangerously-skip-permissions --rc";
       ccw = "claude --allow-dangerously-skip-permissions --worktree";
       # Devbox
       dbx = "devbox";
-      dbr = "devbox run";
-      dbs = "devbox shell";
       # Docker
       dc = "docker compose";
       dcx = "docker compose exec";
