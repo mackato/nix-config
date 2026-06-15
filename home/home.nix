@@ -156,13 +156,18 @@ in
   home.activation.claudeMcpServers = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     claudeJson="${config.home.homeDirectory}/.claude.json"
     # temp は同一ディレクトリにテンプレート付きで作る（BSD/GNU 両対応、かつ mv が atomic rename に
-    # なり Claude が読むファイルの破損を防ぐ）。jq 失敗時は元ファイルを残し temp を掃除して中断する。
+    # なり Claude が読むファイルの破損を防ぐ）。pipefail を効かせた subshell で実行し、cat 失敗時に
+    # echo '{}' へフォールバックして既存状態を空で上書きする事故を防ぐ（cat 非ゼロ→パイプ非ゼロ→中断）。
+    # JSON は lib.escapeShellArg で安全にクォートする。jq 失敗時も元ファイルを残し temp を掃除して中断。
     tmp="$(mktemp "$claudeJson.XXXXXX")"
-    if { [ -e "$claudeJson" ] && cat "$claudeJson" || echo '{}'; } \
-         | ${pkgs.jq}/bin/jq \
-             --argjson servers '${builtins.toJSON mcpServers}' \
-             '.mcpServers = (.mcpServers // {}) + $servers' \
-             > "$tmp"; then
+    if (
+      set -o pipefail
+      { if [ -e "$claudeJson" ]; then cat "$claudeJson"; else echo '{}'; fi; } \
+        | ${pkgs.jq}/bin/jq \
+            --argjson servers ${lib.escapeShellArg (builtins.toJSON mcpServers)} \
+            '.mcpServers = (.mcpServers // {}) + $servers' \
+            > "$tmp"
+    ); then
       $DRY_RUN_CMD mv "$tmp" "$claudeJson"
     else
       rm -f "$tmp"
